@@ -9,6 +9,11 @@
 using namespace DirectX;
 using namespace UniDx;
 
+namespace
+{
+    Vector3 offset = Vector3(0, 1, 0);
+}
+
 void CameraController::OnEnable()
 {
     Quaternion rot = Quaternion::AngleAxis(35, Vector3::right);
@@ -43,5 +48,6 @@ void CameraController::Update()
     }
     Quaternion rot = Quaternion::Euler(pitch, yaw, 0.0f);
     transform->rotation = rot;
-    transform->position = (Vector3::forward * rot) * -length + player->transform->position;
+    transform->position = (Vector3::forward * rot) * -length
+        + player->transform->position + offset;
 }

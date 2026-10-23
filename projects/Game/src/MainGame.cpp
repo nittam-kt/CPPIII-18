@@ -19,6 +19,7 @@
 
 #include <thread>
 #include "MainGame.h"
+#include "Sphere.h"
 
 
 using namespace std;
@@ -26,19 +27,26 @@ using namespace UniDx;
 
 namespace
 {
-    constexpr const char* map_[] = {
-        "###########",
-        "#.#.......#",
-        "#.###.##.##",
-        "#.....#...#",
-        "#.###P###.#",
-        "#..#......#",
-        "##.###.##.#",
-        "#.........#",
-        "###########"
-    };
-    constexpr int mapWidth = 11;
-    constexpr int mapHeight = sizeof(map_) / sizeof(map_[0]);
+    constexpr int mapWidth = 9;
+    constexpr int mapHeight = 9;
+
+    unique_ptr<GameObject> CreateSphere(Vector3 pos)
+    {
+        auto sphere = make_unique<GameObject>(u8"Sphere",
+            SphereRenderer::create<VertexPNT>(u8"resource/ShadeSpec.hlsl", u8"resource/wall.png"),
+            make_unique<SphereCollider>(Vector3::zero, 1.0f),
+//            make_unique<Sphere>(),
+            make_unique<Rigidbody>()
+        );
+        sphere->GetComponent<Rigidbody>()->gravityScale = 0.1f;
+        auto renderer = sphere->GetComponent<SphereRenderer>();
+
+        sphere->transform->localPosition = pos;
+        sphere->transform->localScale = Vector3(2, 2, 2);
+
+        return sphere;
+    }
+
 }
 
 
@@ -84,33 +92,33 @@ void MainGame::createMap()
     Transform::SetParent(move(floor), map->transform);
 
     // 壁
-    for(int i = 0; i < mapHeight; i++)
+    for(int i = 0; i < 4; i++)
     {
-        for(int j = mapWidth - 1; j >= 0; j--)
-        {
-            switch(map_[i][j])
-            {
-            case '#':
-            {
-                rb = make_unique<Rigidbody>();
-                rb->gravityScale = 0;
-                rb->mass = numeric_limits<float>::infinity();
-                auto wall = make_unique<GameObject>(u8"壁",
-                    CubeRenderer::create<VertexPNT>(wallMat),
-                    move(rb),
-                    make_unique<AABBCollider>());
-                wall->transform->localScale = Vector3(2, 2, 2);
-                wall->transform->localPosition = Vector3(j * 2 - mapWidth + 1.0f, 1.0f, i * 2 - mapHeight + 1.0f);
+        rb = make_unique<Rigidbody>();
+        rb->gravityScale = 0;
+        rb->mass = numeric_limits<float>::infinity();
+        auto wall = make_unique<GameObject>(u8"壁",
+            CubeRenderer::create<VertexPNT>(wallMat),
+            move(rb),
+            make_unique<AABBCollider>());
+        auto odd = i % 2 != 0;
+        wall->transform->localScale = Vector3(
+            odd ? mapWidth * 2 : 2.0f, 4, !odd ? mapHeight * 2 : 2.0f);
+        wall->transform->localPosition =
+            Vector3(
+                odd ? 0.0f : i == 0 ? -mapWidth : mapWidth,
+                2.0f,
+                !odd ? 0.0f : i == 1 ? -mapHeight : mapHeight);
 
-                // 親をマップにする
-                Transform::SetParent(move(wall), map->transform);
-            }
-                break;
-            default:
-                break;
-            }
-        }
+        // 親をマップにする
+        Transform::SetParent(move(wall), map->transform);
     }
+
+    Transform::SetParent(
+        CreateSphere(Vector3(0, 3.0f, 1)), map->transform);
+
+    Transform::SetParent(
+        CreateSphere(Vector3(-1, 4.5f, 0)), map->transform);
 
     mapObj = move(map);
 }
